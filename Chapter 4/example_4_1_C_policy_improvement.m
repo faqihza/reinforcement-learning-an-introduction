@@ -121,8 +121,6 @@ while ~policy_stable
                 % check if policy at each state is stable
                 if old_policy ~= policy(i,j)
                     policy_stable = false;
-                else
-                    policy_stable = true;
                 end
             else
                 policy(i,j) = "";
