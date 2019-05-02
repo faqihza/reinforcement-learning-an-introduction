@@ -3,9 +3,9 @@ Implementation in Matlab
 
 All codes based on example and exercise in book entitled below:
 
-### Reinforcement Learning 
-### An Introduction
-### Second Edition
-#### Richard S. Sutton and Andrew G. Barto
+**Reinforcement Learning** 
+**An Introduction**
+**Second Edition**
+_Richard S. Sutton and Andrew G. Barto_
 
 
