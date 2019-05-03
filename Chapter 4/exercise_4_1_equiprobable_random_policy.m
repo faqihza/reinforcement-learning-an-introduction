@@ -1,7 +1,6 @@
 clear
 clc
 
-
 % policy evaluation (prediction)
 %% gridworld 4 x 4
 row_number = 4;
@@ -13,6 +12,8 @@ column_number = 4;
 Vpi = zeros(row_size,column_size);
 % uniform policy
 Pi = 0.25*ones(row_size,column_size,4); %"Up","Down","Left","Right"
+% action-value function = Qpi
+Qpi = zeros(row_size,column_size,4); 
 % discount factor
 gamma = 1;
 % not in place parameter
@@ -105,9 +106,10 @@ while ~policy_stable
                                          Vpi(state_s.left.next_state_row,state_s.left.next_state_col);
                                          Vpi(state_s.right.next_state_row,state_s.right.next_state_col)];
 
-                Qpi =  (all_reward + gamma*all_next_state_value);
-                value = max(Qpi);
-                position_action = ismember(Qpi,value)';
+                Qpi_at_s =  (all_reward + gamma*all_next_state_value);
+                Qpi(row,column,:) = Qpi_at_s;
+                value = max(Qpi_at_s);
+                position_action = ismember(Qpi_at_s,value)';
 
                 new_Pi_at_s = position_action/sum(position_action);
                 Pi_next(row,column,:) = new_Pi_at_s;
@@ -142,8 +144,9 @@ disp("V* = ")
 disp(Vpi)
 disp("policy* = ")
 disp(policy)
-disp("Pi* = ")
-disp(Pi)
+
+disp("Qpi(11,down) = " + Qpi(3,4,2));
+disp("Qpi(7,down) = " + Qpi(2,4,2));
 
 
 

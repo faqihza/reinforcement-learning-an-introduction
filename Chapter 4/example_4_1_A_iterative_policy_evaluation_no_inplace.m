@@ -4,17 +4,19 @@ clc
 
 % policy evaluation (prediction)
 %% gridworld 4 x 4
-[grid,states,size_x,size_y] = gridworld(4,4);
+row_number = 4;
+column_number = 4;
+[grid,states,row_size,column_size] = gridworld(row_number, column_number);
 
 %% Initialization 
 % state-value function = Vpi
-Vpi = zeros(size_x,size_y);
+Vpi = zeros(row_size,column_size);
 % uniform policy
 policy_probability = 0.25;
 % discount factor
 gamma = 1;
 % not in place parameter
-V_buffer = zeros(size_x,size_y);
+V_buffer = zeros(row_size,column_size);
 
 %% Computation
 % looping parameters
@@ -27,16 +29,16 @@ while (delta > convergence_threshold)
     
     
     % loop for each state
-    for i = 1:size_x
-        for j = 1:size_y
+    for row = 1:row_size
+        for column = 1:column_size
             
             % access V(s)
-            Vs = Vpi(i,j);
+            Vs = Vpi(row,column);
             
             v = Vs;
             Vs = 0;
             
-            str_state = sprintf("grid.state_%d",states(i,j));
+            str_state = sprintf("grid.state_%d",states(row,column));
             state_s = eval(str_state);
             
             if ~state_s.terminate
@@ -52,7 +54,7 @@ while (delta > convergence_threshold)
                 
                 Vs = sum(policy_probability*(all_reward + gamma*all_next_state_value));
             end
-            V_buffer(i,j) = Vs;
+            V_buffer(row,column) = Vs;
             delta = max([delta, abs(v - Vs)]);
         end
     end
@@ -61,5 +63,6 @@ while (delta > convergence_threshold)
     
     disp("iteration - " + iteration);
     disp("delta - " + delta);
+    disp("Vpi = ");
     disp(round(Vpi,3,'decimals'));
 end
