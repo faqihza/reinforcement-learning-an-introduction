@@ -16,8 +16,8 @@ max_car = 20;
 max_car_transfer = 5;
 cost_transfer = 2;
 
-[Pa,Ra] = jacks_car_rental_probability_and_reward(1,false,max_car,request_a,return_a);
-[Pb,Rb] = jacks_car_rental_probability_and_reward(2,false,max_car,request_b,return_b);
+[Pa,Ra] = jacks_car_rental_probability_and_reward(1,true,max_car,request_a,return_a);
+[Pb,Rb] = jacks_car_rental_probability_and_reward(2,true,max_car,request_b,return_b);
 
 state_location_a = 0:max_car;
 state_location_b = 0:max_car;
@@ -43,7 +43,7 @@ colorbar;
 %% Computation
 % looping parameters
 convergence_threshold = 0.0001;
-maximum_iteration = 100;
+maximum_iteration = 1;
 iteration = 0;
 delta = 1e10;
 policy_stable = false;

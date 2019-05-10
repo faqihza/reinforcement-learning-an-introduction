@@ -1,12 +1,12 @@
-function [probability_possible_car_morning,possible_average_reward] = jacks_car_rental_probability_and_reward(max_car,request_rate,return_rate)
+function [probability_possible_car_morning,possible_average_reward] = jacks_car_rental_probability_and_reward(fig,show,max_car,request_rate,return_rate)
     
-    show = false;
     possible_car = 0:max_car;
 
     % calculate probability of car at the end of the day
     probability_request = poisspdf(possible_car,request_rate);
     probability_return = poisspdf(possible_car,return_rate);
     probability_possible_car_morning = zeros(length(possible_car),length(possible_car));
+    
     for possible_car_morning = possible_car
         for number_request = 0:max_car
             for number_return = 0:max_car
@@ -35,7 +35,7 @@ function [probability_possible_car_morning,possible_average_reward] = jacks_car_
     end
     
     if show
-        figure(1)
+        figure(fig)
         subplot(1,2,1);
         surface(0:max_car,0:max_car,probability_possible_car_morning);
         colorbar;
