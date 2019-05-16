@@ -1,4 +1,4 @@
-# Reinforcement Learning an Introduction:Codes
+# Reinforcement Learning an Introduction: Codes
 Implementation in Matlab
 
 All codes based on example and exercise in book entitled below:
