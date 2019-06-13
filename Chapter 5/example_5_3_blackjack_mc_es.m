@@ -3,17 +3,18 @@ clc
 
 %% Blackjack Game Play
 
-TOTAL_GAMES = 5e6;
+TOTAL_GAMES = 5e7;
 
 % states
 player_possible_sum = 12:21;
 dealer_showing_card = 1:13;
 ace_status = [1 2]; %["not usable","usable"];
 
-
 % actions
 player_actions = ["stick","hit"];
 
+rand('seed',0);
+randn('seed',0);
 
 %% Monte Carlo Exploring Starts Method 
 
@@ -54,14 +55,16 @@ title( 'no usable ace' );
 figure(2)
 subplot(2,1,1);
 pi_ace = imagesc(dealer_showing_card,player_possible_sum,Pi_usable_ace); colorbar;
+yticklabels(fliplr(player_possible_sum));
 xlabel( 'dealer showing' ); ylabel( 'player sum' )
 pi_title = title( str );
 subplot(2,1,2);
 pi_non_ace = imagesc(dealer_showing_card,player_possible_sum,Pi_non_usable_ace);  colorbar;
+yticklabels(fliplr(player_possible_sum));
 xlabel( 'dealer showing' ); ylabel( 'player sum' )
 title( 'no usable ace' );
 
-step_for_display = 1000;
+step_for_display = 10000;
 count_for_display = 0;
 for game_num = 0:TOTAL_GAMES
     
@@ -102,10 +105,13 @@ for game_num = 0:TOTAL_GAMES
         player_cards(end + 1) = deck(1);
         deck(1) = [];
         player_value = hands_value(player_cards);
+        state_visits(end+1,:) = [player_value, dealer_showing, usable_ace];
         
         if player_value <= 21
-            state_visits(end+1,:) = [player_value, dealer_showing, usable_ace];
             action_taken(end+1,:) = Pi(player_value - 11, dealer_showing, usable_ace);
+        else
+            action_taken(end+1,:) = 1;
+            break
         end
 %         
 %         if player_value > 19
@@ -149,7 +155,7 @@ for game_num = 0:TOTAL_GAMES
            
             Counts(state_action_value_index) = Counts(state_action_value_index) + 1;
             Returns(state_action_value_index) = Returns(state_action_value_index) + reward;
-            Q(state_action_value_index) = Returns(state_action_value_index)/Counts(state_action_value_index);
+            Q(state_action_value_index) = Returns(state_action_value_index)./Counts(state_action_value_index);
             
             
             % policy improvement
