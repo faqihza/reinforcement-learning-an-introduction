@@ -1,0 +1,233 @@
+clear
+clc
+
+%% Blackjack Game Play
+
+TOTAL_GAMES = 5e6;
+
+% states
+player_possible_sum = 12:21;
+dealer_showing_card = 1:13;
+ace_status = [1 2]; %["not usable","usable"];
+
+
+% actions
+player_actions = ["stick","hit"];
+
+
+%% Monte Carlo Exploring Starts Method 
+
+% Initialization
+
+% Monte Carlo ES parameters
+
+
+
+% our initial policy is to always hit "2"
+Pi = 2*ones(length(player_possible_sum), length(dealer_showing_card), length(ace_status)); 
+
+Q = zeros(length(player_possible_sum), length(dealer_showing_card), length(ace_status), length(player_actions));
+V = zeros(length(player_possible_sum), length(dealer_showing_card), length(ace_status));
+
+Returns = zeros(length(player_possible_sum), length(dealer_showing_card), length(ace_status), length(player_actions));
+Counts = zeros(length(player_possible_sum), length(dealer_showing_card), length(ace_status), length(player_actions));
+Q_matrix_size = [length(player_possible_sum), length(dealer_showing_card), length(ace_status), length(player_actions)];
+state_matrix_size = [length(player_possible_sum), length(dealer_showing_card), length(ace_status)];
+
+%% Computation
+
+V_non_usable_ace = V(:,:,1);
+V_usable_ace = V(:,:,2);
+
+Pi_non_usable_ace = flip(Pi(:,:,1));
+Pi_usable_ace = flip(Pi(:,:,2));
+str = sprintf("usable ace: %d Episodes",TOTAL_GAMES);
+
+figure(1)
+subplot(2,1,1);
+v_ace = mesh(dealer_showing_card,player_possible_sum,V_usable_ace);
+xlabel( 'dealer showing' ); ylabel( 'player sum' ); axis xy; view([33,39]);
+title( str )
+subplot(2,1,2);
+v_non_ace = mesh(dealer_showing_card,player_possible_sum,V_non_usable_ace);
+xlabel( 'dealer showing' ); ylabel( 'player sum' ); axis xy; view([33,39]);
+title( 'no usable ace' );
+
+figure(2)
+subplot(2,1,1);
+pi_ace = imagesc(dealer_showing_card,player_possible_sum,Pi_usable_ace); colorbar;
+xlabel( 'dealer showing' ); ylabel( 'player sum' )
+title( str )
+subplot(2,1,2);
+pi_non_ace = imagesc(dealer_showing_card,player_possible_sum,Pi_non_usable_ace);  colorbar;
+xlabel( 'dealer showing' ); ylabel( 'player sum' )
+title( 'no usable ace' );
+
+for game_num = 1:TOTAL_GAMES
+    
+    % initialize deck per game
+    deck = shuffle_cards();
+    
+    % player gets first two cards  
+    player_cards = deck(1:2);
+    [player_value, usable_ace] = hands_value(player_cards);
+    deck(1:2) = []; % remove cards from deck
+    
+    % dealer gets two cards
+    dealer_cards = deck(1:2);
+    dealer_value = hands_value(dealer_cards);
+    dealer_showing = dealer_cards(1);
+    deck(1:2) = []; % remove cards from deck
+    
+    % player with less than 12 always hits
+    while player_value < 12
+        player_cards(end + 1) = deck(1); % hit
+        deck(1) = []; % remove card from deck
+        [player_value, usable_ace] = hands_value(player_cards);
+    end
+    
+    % state depends on current player sum, dealer show card, usable ace
+    state_visits = []; % start with empty history
+    state_visits(1,:) = [player_value, dealer_showing, usable_ace];
+    
+    % action picked at visited state
+    action_taken = []; % start with empty string array
+   
+    % EXPLORING START
+    action_taken(1,:) = randi([1 2]);
+    
+    while (action_taken(end) == 2 && player_value < 22)
+        
+        % take next card
+        player_cards(end + 1) = deck(1);
+        deck(1) = [];
+        player_value = hands_value(player_cards);
+        
+        if player_value <= 21
+            state_visits(end+1,:) = [player_value, dealer_showing, usable_ace];
+            action_taken(end+1,:) = Pi(player_value - 11, dealer_showing, usable_ace);
+        end
+%         
+%         if player_value > 19
+%             action_taken(end+1,:) = 1; % player will stick only at 20 and 21
+%         else
+%             action_taken(end+1,:) = Pi(player_value - 11, dealer_showing, usable_ace);
+%         end
+        
+    end
+    
+    % policy at dealer (hit until hand value is 17)
+    
+    while (dealer_value < 17)
+        dealer_cards(end + 1) = deck(1);
+        deck(1) = [];
+        dealer_value = hands_value(dealer_cards);
+    end
+    
+    % calculate rewards
+    reward = calculate_reward(player_value,dealer_value);
+    
+    n_state_visited = size(state_visits,1);
+    
+    % policy evaluation
+    for si = 1:n_state_visited
+        
+        % get state and action
+        player_value_at_state = state_visits(si,1);
+        dealer_showing_at_state = state_visits(si,2);
+        usable_ace_at_state = state_visits(si,3);
+        action_taken_at_state = action_taken(si);
+        
+        if player_value_at_state >= 12 && player_value_at_state <= 21
+            
+            % state-action evaluation
+            state_action_value_index = sub2ind(Q_matrix_size,...
+                                  player_value_at_state - 11,...
+                                  dealer_showing_at_state,...
+                                  usable_ace_at_state,...
+                                  action_taken_at_state);
+           
+            Counts(state_action_value_index) = Counts(state_action_value_index) + 1;
+            Returns(state_action_value_index) = Returns(state_action_value_index) + reward;
+            Q(state_action_value_index) = Returns(state_action_value_index)/Counts(state_action_value_index);
+            
+            
+            % policy improvement
+            [Q_at_greedy_action, greedy_action] = max(Q(player_value_at_state-11,dealer_showing_at_state,usable_ace_at_state,:));
+            
+            policy_index = sub2ind(state_matrix_size,...
+                               player_value_at_state - 11,...
+                               dealer_showing_at_state,...
+                               usable_ace_at_state);
+            
+            Pi(policy_index) = greedy_action;          
+            
+            % state value evaluation
+            state_index = sub2ind(state_matrix_size,...
+                               player_value_at_state - 11,...
+                               dealer_showing_at_state,...
+                               usable_ace_at_state);
+           
+            V(state_index) = Q_at_greedy_action;
+        end
+        
+        
+    end
+    
+    
+    
+    
+%     if game_num == TEST_EPISODE
+%         Vpi = Sreturns./Scounts;
+% 
+%         Vpi_non_usable_ace = Vpi(:,:,1);
+%         Vpi_usable_ace = Vpi(:,:,2);
+% 
+%         figure(1)
+%         subplot(2,1,1);
+%         mesh(dealer_showing_card,player_possible_sum,Vpi_usable_ace);
+%         xlabel( 'dealer showing' ); ylabel( 'player sum' ); axis xy; view([33,39]);
+%         title( 'usable ace: 100000 Episodes' )
+%         subplot(2,1,2);
+%         mesh(dealer_showing_card,player_possible_sum,Vpi_non_usable_ace);
+%         xlabel( 'dealer showing' ); ylabel( 'player sum' ); axis xy; view([33,39]);
+%         title( 'no usable ace' );
+%     
+%     end
+    
+    if mod(TOTAL_G
+    pi_non_ace.CData = flip(Pi(:,:,1));
+    pi_ace.CData = flip(Pi(:,:,2));
+    v_ace.ZData = V(:,:,1);
+    v_ace.CData = V(:,:,1);
+    v_non_ace.ZData = V(:,:,2);
+    v_non_ace.CData = V(:,:,2);
+    drawnow;
+end
+
+V_non_usable_ace = V(:,:,1);
+V_usable_ace = V(:,:,2);
+
+Pi_non_usable_ace = flip(Pi(:,:,1));
+Pi_usable_ace = flip(Pi(:,:,2));
+
+str = sprintf("usable ace: %d Episodes",TOTAL_GAMES);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
