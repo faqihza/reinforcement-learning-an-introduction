@@ -9,7 +9,7 @@ TEST_EPISODE = 100000;
 
 % states
 player_possible_sum = 12:21;
-dealer_showing_card = 1:13;
+dealer_showing_card = 1:10;
 ace_status = [1 2]; %["not usable","usable"];
 
 state_matrix_size = [length(player_possible_sum), length(dealer_showing_card), length(ace_status)];
@@ -77,7 +77,7 @@ for game_num = 1:TOTAL_GAMES
     while (policy_at_state == "hit" && player_value < 22)
         player_cards(end + 1) = deck(1);
         deck(1) = [];
-        player_value = hands_value(player_cards);
+        [player_value, usable_ace] = hands_value(player_cards);
         state_visits(end+1,:) = [player_value, dealer_showing, usable_ace];
         
         if player_value > 21

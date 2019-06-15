@@ -3,7 +3,7 @@ clc
 
 %% Blackjack Game Play
 
-TOTAL_GAMES = 5e6;
+TOTAL_GAMES = 5e7;
 
 % states
 player_possible_sum = 12:21;
@@ -17,11 +17,11 @@ player_actions = ["stick","hit"];
 
 % Initialization
 
-% Monte Carlo ES parameters
+% Monte Carlo parameters
 
-% our initial policy is to always hit "2"
-% Pi = 2*ones(length(player_possible_sum), length(dealer_showing_card), length(ace_status)); 
-Pi = randi([1 2],length(player_possible_sum), length(dealer_showing_card), length(ace_status));
+% our initial epsilon-soft policy
+Pi = 0.5*ones(length(player_possible_sum), length(dealer_showing_card), length(ace_status), length(player_actions)); 
+Pi_optimal = ones(length(player_possible_sum), length(dealer_showing_card), length(ace_status)); 
 
 Q = zeros(length(player_possible_sum), length(dealer_showing_card), length(ace_status), length(player_actions));
 % Q = -1 + (1+1).*rand(length(player_possible_sum), length(dealer_showing_card), length(ace_status), length(player_actions));
@@ -32,13 +32,18 @@ Counts = zeros(length(player_possible_sum), length(dealer_showing_card), length(
 Q_matrix_size = [length(player_possible_sum), length(dealer_showing_card), length(ace_status), length(player_actions)];
 state_matrix_size = [length(player_possible_sum), length(dealer_showing_card), length(ace_status)];
 
+% Epsilon-soft policy
+% epsilon = 0; % full greedy
+epsilon = 0.05; % e-soft
+% epsilon = 1; % random exploring
+
 %% Computation
 
 V_non_usable_ace = V(:,:,1);
 V_usable_ace = V(:,:,2);
 
-Pi_non_usable_ace = flip(Pi(:,:,1));
-Pi_usable_ace = flip(Pi(:,:,2));
+Pi_optimal_non_usable_ace = flip(Pi_optimal(:,:,1));
+Pi_optimal_usable_ace = flip(Pi_optimal(:,:,2));
 str = sprintf("usable ace: %d Episodes",0);
 
 figure(1)
@@ -53,12 +58,12 @@ title( 'no usable ace' );
 
 figure(2)
 subplot(2,1,1);
-pi_ace = imagesc(dealer_showing_card,player_possible_sum,Pi_usable_ace); colorbar;
+pi_ace = imagesc(dealer_showing_card,player_possible_sum,Pi_optimal_usable_ace); colorbar;
 yticklabels(fliplr(player_possible_sum));
 xlabel( 'dealer showing' ); ylabel( 'player sum' )
 pi_title = title( str );
 subplot(2,1,2);
-pi_non_ace = imagesc(dealer_showing_card,player_possible_sum,Pi_non_usable_ace);  colorbar;
+pi_non_ace = imagesc(dealer_showing_card,player_possible_sum,Pi_optimal_non_usable_ace);  colorbar;
 yticklabels(fliplr(player_possible_sum));
 xlabel( 'dealer showing' ); ylabel( 'player sum' )
 title( 'no usable ace' );
@@ -93,12 +98,10 @@ for game_num = 0:TOTAL_GAMES
     
     % action and state depends on current player sum, dealer show card, usable ace
     action_state_visits = []; % start with empty history
-      
-    
-    %% EXPLORING START
-    
-    action_exploring_start = unidrnd(2);
-    action_state_visits(1,:) = [player_value, dealer_showing, usable_ace, action_exploring_start];
+    greedy_status = string();
+    available_action(:) = Pi(player_value - 11, dealer_showing, usable_ace,:);
+    [greedy_status(end), action_to_take] = soft_policy(available_action, epsilon);
+    action_state_visits(1,:) = [player_value, dealer_showing, usable_ace, action_to_take];
     
     %% Next Move
     while (action_state_visits(end,4) == 2 && player_value < 22)
@@ -110,7 +113,9 @@ for game_num = 0:TOTAL_GAMES
         action_state_visits(end+1,:) = [player_value, dealer_showing, usable_ace, 1]; % default action to stick
         
         if player_value <= 21 % take next policy if the player value is less than 21
-            action_state_visits(end,4) = Pi(player_value - 11, dealer_showing, usable_ace);
+            available_action(:) = Pi(player_value - 11, dealer_showing, usable_ace,:);
+            [greedy_status(end + 1), action_to_take] = soft_policy(available_action, epsilon);
+            action_state_visits(end,4) = action_to_take;
         end
         
     end
@@ -155,8 +160,19 @@ for game_num = 0:TOTAL_GAMES
             % maximum action
             [Q_at_greedy_action, greedy_action] = max(Q(a,b,c,:)); % get maximum between 2 actions
             
+            % |A(s)| <-- cardinality = number of member in a set A(s)
+            num_action = length(Q(a,b,c,:));
+            for action = 1:num_action
+                if action == greedy_action
+                    Pi(a,b,c,action) = 1 - epsilon + (epsilon/num_action);
+                else
+                    Pi(a,b,c,action) = (epsilon/num_action);
+                end
+            end
+            
             %% policy improvement
-            Pi(a,b,c) = greedy_action;          
+            [action_value, optimal_action] = max(Pi(a,b,c,:));
+            Pi_optimal(a,b,c) = optimal_action;  
             
             %% optimal state value 
             V(a,b,c) = Q_at_greedy_action;
@@ -166,8 +182,8 @@ for game_num = 0:TOTAL_GAMES
     %% reporting
     
     if count_for_display == game_num
-        pi_non_ace.CData = flip(Pi(:,:,1));
-        pi_ace.CData = flip(Pi(:,:,2));
+        pi_non_ace.CData = flip(Pi_optimal(:,:,1));
+        pi_ace.CData = flip(Pi_optimal(:,:,2));
         v_ace.ZData = V(:,:,1);
         v_ace.CData = V(:,:,1);
         v_non_ace.ZData = V(:,:,2);
@@ -183,22 +199,3 @@ for game_num = 0:TOTAL_GAMES
 end
 
 toc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
