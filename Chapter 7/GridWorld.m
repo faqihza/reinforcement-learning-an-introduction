@@ -8,20 +8,36 @@ classdef GridWorld < handle
         size;
         terminalState;
         stateIDs;
+        rewards;
         canvas;
     end
     
     methods
-        function self = GridWorld(sizeX,sizeY,terminalPoint)
+        function self = GridWorld(sizeX,sizeY,terminalPoint,reward)
             self.sizeX = sizeX;
             self.sizeY = sizeY;
             self.size = [sizeX sizeY];
             self.terminalState = terminalPoint;
+            self.stateIDs = 1:sizeX*sizeY;
+            self.rewards = zeros(sizeX*sizeY,1);
+            self.rewards(self.terminalState) = reward;
             initDraw(self);
+        end
+        
+        function totalState = getTotalState(self)
+            totalState = length(self.stateIDs);
         end
         
         function stateID = getState(self,posX,posY)
            stateID = sub2ind(self.size,posY,posX);
+        end
+        
+        function reward = getReward(self,state)
+           reward = self.rewards(state);
+        end
+        
+        function isTerminal = checkTerminalState(self,state)
+            isTerminal = (self.terminalState == state);
         end
         
         function initDraw(self)
