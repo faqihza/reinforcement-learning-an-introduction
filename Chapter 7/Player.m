@@ -23,7 +23,8 @@ classdef Player < handle
     
     methods
         
-        function self = Player(arena,epsilonGreedy,discountFactor,nStep,stepSize)
+%         function self = Player(arena,epsilonGreedy,discountFactor,nStep,stepSize)
+        function self = Player(varargin)
             self.actions = ["up","down","right","left"];
             self.arena = arena;
             stateNum = length(arena.stateIDs);

@@ -36,8 +36,8 @@ for i=1:totalEpisode
     if countView == updateView
         frameCount = frameCount + 1;
         drawnow;
+        pause(0.1);
         u.Value = frameCount;
-        frame(frameCount) = getframe;
         updateView = updateView + 10;
     end
 end
